@@ -135,6 +135,8 @@ class QuikLog
 
 // The simple version
 
+/* PP */ if( !defined( 'QUIKLOG_NO_SIMPLE' ) ):
+
 function qlogconf( $file )
 {
 	global $_quiklog;
@@ -170,6 +172,8 @@ function quiklog_filter_textHas( $what, $type, $params, $args, $config )
 function quiklog_filter_textHasNot( $what, $type, $params, $args, $config ){ return !quiklog_filter_textHas( $what, $type, $params, $args, $config ); }
 function quiklog_filter_typeIs( $what, $type, $params, $args, $config ){ return in_array( $type, $args ); }
 function quiklog_filter_typeIsNot( $what, $type, $params, $args, $config ){ return !quiklog_filter_typeIs( $what, $type, $params, $args, $config ); }
+
+/* PP */ endif;
 
 
 function quiklog_output_php( $what, $type, $params, $config, $quiklog )
