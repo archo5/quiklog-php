@@ -14,7 +14,6 @@ class QuikLog
 	static function fromIniParsed( $data )
 	{
 		$loggers = array();
-		var_dump( $data );
 		
 		if( !isset( $data[ 'quiklog' ] ) )
 			return 'No entry section \'quiklog\' found';
@@ -32,7 +31,33 @@ class QuikLog
 			if( !function_exists( 'quiklog_output_'.$info[ 'type' ] ) )
 				return "Invalid type value '{$info['type']}' for logger '{$logger}'";
 			
-			$loggers[] = (object) array( 'name' => $logger, 'output' => $info[ 'type' ], 'filter' => '' );
+			$filters = array();
+			if( isset( $info[ 'filters' ] ) )
+			{
+				foreach( $info[ 'filters' ] as $filter )
+				{
+					$p1 = strpos( $filter, ' ' );
+					$p2 = strpos( $filter, "\t" );
+					
+					if( $p1 === false ) $pos = $p2;
+					elseif( $p2 === false ) $pos = $p1;
+					else $pos = min( $p1, $p2 );
+					
+					$args = array();
+					if( $pos === false )
+					{
+						$filters[] = array( 'name' => $filter, 'args' => $args );
+					}
+					else
+					{
+						$name = substr( $filter, 0, $pos );
+						$args = str_getcsv( trim( substr( $filter, $pos ) ), ',', '\'' );
+						$filters[] = array( 'name' => $name, 'args' => $args );
+					}
+				}
+			}
+			
+			$loggers[] = (object) array( 'name' => $logger, 'output' => $info[ 'type' ], 'filters' => $filters );
 		}
 		
 		return new QuikLog( $loggers, $data );
@@ -46,7 +71,7 @@ class QuikLog
 	{
 		foreach( $this->loggers as $logger )
 		{
-			if( $this->evalFilter( $logger->filter ) )
+			if( $this->evalFilters( $logger->filters, $what, $type, $params ) )
 			{
 				$config = $this->getConfig( 'output.'.$logger->output );
 				$lcfg = $this->getConfig( $logger->name );
@@ -57,8 +82,13 @@ class QuikLog
 	}
 	
 	// PRIVATE-ish
-	function evalFilter( $filter )
+	function evalFilters( $filters, $what, $type, $params )
 	{
+		foreach( $filters as $filter )
+		{
+			if( !call_user_func( 'quiklog_filter_'.$filter['name'], $what, $type, $params, $filter['args'], $this->getConfig( 'filter.'.$filter['name'] ) ) )
+				return false;
+		}
 		return true;
 	}
 	
@@ -111,6 +141,10 @@ function qlog_error( $what ){ qlog( $what, 'error' ); }
 
 
 // Filters / outputs / formats
+
+function quiklog_filter_typeIs( $what, $type, $params, $args, $config ){ return in_array( $type, $args ); }
+function quiklog_filter_typeNot( $what, $type, $params, $args, $config ){ return !quiklog_filter_typeIs( $what, $type, $params, $args, $config ); }
+
 
 function quiklog_output_php( $what, $type, $params, $config, $quiklog )
 {

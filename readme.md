@@ -17,5 +17,4 @@ Usage (advanced)
 
 TODO
 -
-* filters
-* more outputs/formats
+* more filters/outputs/formats
