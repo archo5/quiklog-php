@@ -1,5 +1,11 @@
 <?php
 
+// Configuration
+
+if( !defined( 'QUIKLOG_ERROR' ) )
+	define( 'QUIKLOG_ERROR', E_USER_ERROR );
+
+
 // Helpers
 
 function qlh_getindex( $arr, $key, $def )
@@ -134,14 +140,14 @@ function qlogconf( $file )
 	global $_quiklog;
 	$_quiklog = QuikLog::fromIniFile( $file );
 	if( is_string( $_quiklog ) )
-		trigger_error( 'Failed to initialize QuikLog - '.$_quiklog, E_USER_ERROR );
+		trigger_error( 'Failed to initialize QuikLog - '.$_quiklog, QUIKLOG_ERROR );
 }
 
 function qlog( $what, $type )
 {
 	global $_quiklog;
 	if( !isset( $_quiklog ) )
-		trigger_error( 'Need to call qlogconf before qlog/qlog_*', E_USER_ERROR );
+		trigger_error( 'Need to call qlogconf before qlog/qlog_*', QUIKLOG_ERROR );
 	$_quiklog->log( $what, $type );
 }
 
@@ -179,7 +185,9 @@ function quiklog_output_php( $what, $type, $params, $config, $quiklog )
 function quiklog_output_file( $what, $type, $params, $config, $quiklog )
 {
 	$what = $quiklog->format( $what, $type, $params, $config );
-	$file = $config[ 'file' ];
+	$file = qlh_getindex( $config, 'file', null );
+	if( $file === null )
+		trigger_error( 'quiklog_output_file: No file specified', QUIKLOG_ERROR );
 	if( strpos( $file, '%DATE%' ) !== false )
 	{
 		$dateval = date( qlh_getindex( $config, 'dateformat', 'Ymd' ) );
@@ -187,9 +195,24 @@ function quiklog_output_file( $what, $type, $params, $config, $quiklog )
 	}
 	$f = fopen( $file, 'a' );
 	if( !$f )
-		trigger_error( 'quiklog_output_file: Could not open file for writing', E_USER_ERROR );
+		trigger_error( 'quiklog_output_file: Could not open file for writing', QUIKLOG_ERROR );
 	fwrite( $f, $what . PHP_EOL );
 	fclose( $f );
+}
+function quiklog_output_mail( $what, $type, $params, $config, $quiklog )
+{
+	$what = $quiklog->format( $what, $type, $params, $config );
+	$to = qlh_getindex( $config, 'to', null );
+	$from = qlh_getindex( $config, 'from', null );
+	$subject = qlh_getindex( $config, 'subject', 'QuikLog - '.ucfirst( $type ) );
+	$hdrs = '';
+	if( $to === null )
+		trigger_error( 'quiklog_output_mail: Mail destination not specified', QUIKLOG_ERROR );
+	if( $from !== null )
+		$hdrs .= "From: {$from}\r\n";
+	$result = mail( $to, $subject, $what, $hdrs );
+	if( !$result )
+		trigger_error( 'quiklog_output_mail: Failed to add message to mail queue', QUIKLOG_ERROR );
 }
 
 
