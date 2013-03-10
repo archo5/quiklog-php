@@ -1,5 +1,13 @@
 <?php
 
+// Helpers
+
+function qlh_getindex( $arr, $key, $def )
+{
+	return isset( $arr[ $key ] ) ? $arr[ $key ] : $def;
+}
+
+
 // The advanced version
 
 class QuikLog
@@ -160,7 +168,13 @@ function quiklog_output_php( $what, $type, $params, $config, $quiklog )
 function quiklog_output_file( $what, $type, $params, $config, $quiklog )
 {
 	$what = $quiklog->format( $what, $type, $params, $config );
-	$f = fopen( $config[ 'file' ], 'a' );
+	$file = $config[ 'file' ];
+	if( strpos( $file, '%DATE%' ) !== false )
+	{
+		$dateval = date( qlh_getindex( $config, 'dateformat', 'Ymd' ) );
+		$file = str_replace( '%DATE%', $dateval, $file );
+	}
+	$f = fopen( $file, 'a' );
 	if( !$f )
 		trigger_error( 'quiklog_output_file: Could not open file for writing', E_USER_ERROR );
 	fwrite( $f, $what . PHP_EOL );
