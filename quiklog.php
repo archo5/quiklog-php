@@ -36,6 +36,8 @@ class QuikLog
 			$info = $data[ $logger ];
 			if( !isset( $info[ 'type' ] ) )
 				return "'type' parameter not found in logger '{$logger}'";
+			if( $info[ 'type' ] === '' )
+				continue; // disabled
 			if( !function_exists( 'quiklog_output_'.$info[ 'type' ] ) )
 				return "Invalid type value '{$info['type']}' for logger '{$logger}'";
 			
@@ -150,8 +152,18 @@ function qlog_error( $what ){ qlog( $what, 'error' ); }
 
 // Filters / outputs / formats
 
+function quiklog_filter_textHas( $what, $type, $params, $args, $config )
+{
+	foreach( $args as $arg )
+	{
+		if( strpos( $what, $arg ) !== false )
+			return true;
+	}
+	return false;
+}
+function quiklog_filter_textHasNot( $what, $type, $params, $args, $config ){ return !quiklog_filter_textHas( $what, $type, $params, $args, $config ); }
 function quiklog_filter_typeIs( $what, $type, $params, $args, $config ){ return in_array( $type, $args ); }
-function quiklog_filter_typeNot( $what, $type, $params, $args, $config ){ return !quiklog_filter_typeIs( $what, $type, $params, $args, $config ); }
+function quiklog_filter_typeIsNot( $what, $type, $params, $args, $config ){ return !quiklog_filter_typeIs( $what, $type, $params, $args, $config ); }
 
 
 function quiklog_output_php( $what, $type, $params, $config, $quiklog )
@@ -164,7 +176,6 @@ function quiklog_output_php( $what, $type, $params, $config, $quiklog )
 	}
 	trigger_error( $what, $type );
 }
-
 function quiklog_output_file( $what, $type, $params, $config, $quiklog )
 {
 	$what = $quiklog->format( $what, $type, $params, $config );
